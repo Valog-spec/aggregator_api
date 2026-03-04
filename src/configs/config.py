@@ -11,10 +11,10 @@ class Settings(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", extra="ignore"
     )
 
-    DATABASE_URL: str
-    REDIS_URL: str | None
-    EVENTS_PROVIDER_BASE_URL: str
-    EVENTS_PROVIDER_API_KEY: str
+    DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost:5432/aggregator"
+    REDIS_URL: str | None = "redis://localhost:6379/0"
+    EVENTS_PROVIDER_BASE_URL: str = "https://events-provider.dev-2.python-labs.ru"
+    EVENTS_PROVIDER_API_KEY: str = "your-key-here"
 
     POSTGRES_CONNECTION_STRING: str | None = None
 
