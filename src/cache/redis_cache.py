@@ -3,11 +3,14 @@ from typing import Any
 
 import redis.asyncio as aioredis
 
+from src.cache.base import AsyncCacheProtocol
+from src.cache.memory_cache import InMemoryTTLCache
 from src.configs.config import settings
 
-redis_client: aioredis.Redis = aioredis.from_url(
-    settings.REDIS_URL,
-    decode_responses=True,
+redis_client: aioredis.Redis | None = (
+    aioredis.from_url(settings.REDIS_URL, decode_responses=True)
+    if settings.REDIS_URL
+    else None
 )
 
 
@@ -71,6 +74,8 @@ class RedisTTLCache:
         await self._client.delete(*[self._key(k) for k in keys])
 
 
-def get_seats_cache() -> RedisTTLCache:
-    """Создать экземпляр кеша мест с префиксом ``seats`` и TTL 30 секунд."""
-    return RedisTTLCache(client=redis_client, ttl=30, prefix="seats")
+def get_seats_cache() -> AsyncCacheProtocol:
+    """Вернуть кеш мест: Redis если REDIS_URL задан, иначе in-memory."""
+    if redis_client is not None:
+        return RedisTTLCache(client=redis_client, ttl=30, prefix="seats")
+    return InMemoryTTLCache(ttl=30)

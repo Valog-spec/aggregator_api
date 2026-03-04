@@ -2,6 +2,7 @@
 
 import logging
 from typing import Any, AsyncIterator
+from urllib.parse import urlparse
 
 import httpx
 
@@ -66,7 +67,10 @@ class HttpxEventsProviderClient:
             next_url = data.get("next")
             page_num = 2
             while next_url:
-                next_url = next_url.replace("http://", "https://", 1)
+                parsed = urlparse(next_url)
+                next_url = self._base_url + parsed.path
+                if parsed.query:
+                    next_url += f"?{parsed.query}"
                 response = await client.get(next_url)
                 response.raise_for_status()
 

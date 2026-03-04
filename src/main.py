@@ -63,7 +63,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             await task
         except asyncio.CancelledError:
             pass
-        await redis_client.aclose()
+        if redis_client is not None:
+            await redis_client.aclose()
 
 
 app = FastAPI(title="Aggregator API", lifespan=lifespan)

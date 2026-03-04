@@ -9,7 +9,7 @@ from src.use_cases.tickets_use_cases import CancelTicketUseCase, CreateTicketUse
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 
-@router.post("/", response_model=TicketCreated, status_code=201)
+@router.post("", response_model=TicketCreated, status_code=201)
 async def create_ticket(
     data: TicketCreate,
     use_case: Annotated[CreateTicketUseCase, Depends(get_create_ticket_use_case)],

@@ -20,7 +20,7 @@ from src.use_cases.events_use_cases import (
 router = APIRouter(prefix="/events", tags=["events"])
 
 
-@router.get("/", response_model=PaginatedEvents)
+@router.get("", response_model=PaginatedEvents)
 async def list_events(
     request: Request,
     use_case: Annotated[GetEventsUseCase, Depends(get_get_events_use_case)],
