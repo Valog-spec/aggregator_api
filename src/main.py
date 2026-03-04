@@ -73,7 +73,9 @@ app = FastAPI(title="Aggregator API", lifespan=lifespan)
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
     return JSONResponse(status_code=400, content={"detail": exc.errors()})
 
 
