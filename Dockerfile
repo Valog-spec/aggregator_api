@@ -16,4 +16,4 @@ RUN uv sync --frozen --no-cache --no-dev
 ENV UV_NO_CACHE=1
 ENV UV_NO_SYNC=1
 
-CMD ["uv", "run", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["bash", "./run.sh"]
