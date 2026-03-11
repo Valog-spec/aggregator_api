@@ -62,7 +62,7 @@ class OutboxRepository:
         )
         await self._session.execute(stmt)
 
-    async def increment_retry(self, message_id: uuid.UUID, error: str):
+    async def increment_retry(self, message_id: uuid.UUID):
         """Увеличить счетчик попыток"""
         stmt = (
             update(Outbox)

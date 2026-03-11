@@ -83,12 +83,16 @@ class OutboxWorker:
                 await self._outbox_repo.mark_as_sent(msg.id)
                 logger.info(f"Сообщение {msg.id} успешно отправлено в Capashino")
             else:
-                await self._outbox_repo.increment_retry(msg.id, "Temporary error")
                 logger.warning(
                     f"Сообщение {msg.id} временно не отправлено, "
                     f"попытка {msg.retry_count + 1}/{self.max_retries}"
                 )
+                await self._outbox_repo.increment_retry(msg.id)
 
         except Exception as e:
-            await self._outbox_repo.increment_retry(msg.id, str(e))
-            logger.error(f"Ошибка при отправке сообщения {msg.id}: {e}")
+            delay = 2 ** (msg.retry_count + 1)
+            logger.error(
+                f"Ошибка при отправке сообщения {msg.id}: {e}, следующая через {delay}с"
+            )
+            await asyncio.sleep(delay)
+            await self._outbox_repo.increment_retry(msg.id)

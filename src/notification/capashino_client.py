@@ -23,7 +23,7 @@ class HttpxCapashinoClient:
         """
         self._base_url = base_url.rstrip("/")
         self._api_key = api_key
-        self._timeout = 30
+        self._timeout = 70
 
     def _headers(self) -> dict[str, str]:
         """Вернуть заголовки для аутентификации."""
