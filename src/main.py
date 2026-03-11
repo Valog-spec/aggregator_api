@@ -16,6 +16,9 @@ from src.api.v1.health import router as health_router
 from src.api.v1.sync import router as sync_router
 from src.api.v1.tickets import router as tickets_router
 from src.logger.config import dict_config
+from src.notification.capashino_client import get_сapashino_client
+from src.repositories.outbox_repository import OutboxRepository
+from src.workers.outbox_worker import OutboxWorker
 
 logging.config.dictConfig(dict_config)
 logger = logging.getLogger(__name__)
@@ -47,6 +50,26 @@ async def _daily_sync_loop() -> None:
         await asyncio.sleep(24 * 60 * 60)
 
 
+async def _outbox_worker_loop():
+    """Бесконечный цикл воркера outbox"""
+    from src.database import async_session_factory
+
+    try:
+        async with async_session_factory() as session:
+            worker_outbox = OutboxWorker(
+                outbox_repo=OutboxRepository(session),
+                capashino_client=get_сapashino_client(),
+            )
+            logger.info("Запуск фонового воркера outbox")
+            await worker_outbox.start()
+    except asyncio.CancelledError:
+        logger.info("Воркер outbox получил сигнал остановки")
+        raise
+    except Exception as e:
+        logger.exception(f"Критическая ошибка воркера outbox: {e}")
+        raise
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Управление жизненным циклом приложения.
@@ -57,12 +80,19 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from src.cache.redis_cache import redis_client
 
     task = asyncio.create_task(_daily_sync_loop())
+    outbox_task = asyncio.create_task(_outbox_worker_loop())
+    logger.info("Фоновые задачи запущены: синхронизация (24ч) и outbox (5с)")
     try:
         yield
     finally:
         task.cancel()
+        outbox_task.cancel()
         try:
             await task
+        except asyncio.CancelledError:
+            pass
+        try:
+            await outbox_task
         except asyncio.CancelledError:
             pass
         if redis_client is not None:

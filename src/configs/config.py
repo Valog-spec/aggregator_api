@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     REDIS_URL: str | None = "redis://localhost:6379/0"
     EVENTS_PROVIDER_BASE_URL: str = "https://events-provider.dev-2.python-labs.ru"
     EVENTS_PROVIDER_API_KEY: str = "your-key-here"
-
+    CAPASHINO_BASE_URL: str = "https://capashino.dev-2.python-labs.ru"
     POSTGRES_CONNECTION_STRING: str | None = None
 
     @model_validator(mode="after")

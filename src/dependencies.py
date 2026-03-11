@@ -12,6 +12,7 @@ from src.clients.events_provider import (
 )
 from src.database import async_session_factory
 from src.repositories.event_repository import EventRepository
+from src.repositories.outbox_repository import OutboxRepository
 from src.repositories.sync_meta_repository import SyncMetaRepository
 from src.repositories.ticket_repository import TicketRepository
 from src.use_cases.events_use_cases import (
@@ -48,6 +49,11 @@ def get_sync_meta_repo(session: SessionDep) -> SyncMetaRepository:
     return SyncMetaRepository(session)
 
 
+def get_outbox_repo(session: SessionDep) -> OutboxRepository:
+    """Создать HTTP-клиент для оптравки уведомления."""
+    return OutboxRepository(session)
+
+
 def get_provider_client() -> HttpxEventsProviderClient:
     """Создать HTTP-клиент внешнего провайдера событий."""
     return get_events_provider_client()
@@ -62,6 +68,7 @@ EventRepoDep = Annotated[EventRepository, Depends(get_event_repo)]
 TicketRepoDep = Annotated[TicketRepository, Depends(get_ticket_repo)]
 SyncMetaRepoDep = Annotated[SyncMetaRepository, Depends(get_sync_meta_repo)]
 ProviderClientDep = Annotated[HttpxEventsProviderClient, Depends(get_provider_client)]
+OutboxRepoDep = Annotated[OutboxRepository, Depends(get_outbox_repo)]
 CacheDep = Annotated[RedisTTLCache, Depends(get_cache)]
 
 
@@ -85,10 +92,11 @@ def get_get_seats_use_case(
 def get_create_ticket_use_case(
     ticket_repo: TicketRepoDep,
     event_repo: EventRepoDep,
+    outbox_repo: OutboxRepoDep,
     provider_client: ProviderClientDep,
 ) -> CreateTicketUseCase:
     """Собрать use case регистрации на событие."""
-    return CreateTicketUseCase(ticket_repo, event_repo, provider_client)
+    return CreateTicketUseCase(ticket_repo, event_repo, outbox_repo, provider_client)
 
 
 def get_cancel_ticket_use_case(

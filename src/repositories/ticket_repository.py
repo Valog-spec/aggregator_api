@@ -49,7 +49,7 @@ class TicketRepository:
             seat=seat,
         )
         self._session.add(ticket)
-        await self._session.flush()
+
         return ticket
 
     async def get_by_ticket_id(self, ticket_id: str) -> Ticket | None:

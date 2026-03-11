@@ -4,7 +4,9 @@ from fastapi import HTTPException
 from src.clients.base import EventsProviderClient
 from src.models.event import EventStatus
 from src.repositories.event_repository import EventRepository
+from src.repositories.outbox_repository import OutboxRepository
 from src.repositories.ticket_repository import TicketRepository
+from src.schemas.outbox import OutboxPayload
 from src.schemas.ticket import TicketCancelled, TicketCreate, TicketCreated
 
 
@@ -15,10 +17,12 @@ class CreateTicketUseCase:
         self,
         ticket_repo: TicketRepository,
         event_repo: EventRepository,
+        outbox_repo: OutboxRepository,
         provider_client: EventsProviderClient,
     ) -> None:
         self._ticket_repo = ticket_repo
         self._event_repo = event_repo
+        self._outbox_repo = outbox_repo
         self._client = provider_client
 
     async def execute(self, data: TicketCreate) -> TicketCreated:
@@ -76,6 +80,12 @@ class CreateTicketUseCase:
             email=data.email,
             seat=data.seat,
         )
+        payload = OutboxPayload.from_ticket_data(ticket_id, data)
+
+        await self._outbox_repo.create(
+            event_type="ticket.created", payload=payload.model_dump()
+        )
+
         return TicketCreated(ticket_id=ticket_id)
 
 
