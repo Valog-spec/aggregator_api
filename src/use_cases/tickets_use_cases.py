@@ -1,3 +1,5 @@
+import asyncio
+
 import httpx
 from fastapi import HTTPException
 
@@ -27,6 +29,8 @@ class CreateTicketUseCase:
         self._outbox_repo = outbox_repo
         self._idempotency_repo = idempotency_repo
         self._client = provider_client
+        self.max_retries = 5
+        self.retry_delay = 1
 
     async def execute(self, data: TicketCreate) -> TicketCreated:
         """
@@ -56,21 +60,27 @@ class CreateTicketUseCase:
                 status_code=400, detail="Событие недоступно для регистрации"
             )
         if data.idempotency_key:
-            existing = await self._idempotency_repo.find_by_key(data.idempotency_key)
-            if existing:
-                if (
-                    existing.event_id == data.event_id
-                    and existing.first_name == data.first_name
-                    and existing.last_name == data.last_name
-                    and existing.email == data.email
-                    and existing.seat == data.seat
-                ):
-                    return TicketCreated(ticket_id=str(existing.ticket_id))
-                else:
-                    raise HTTPException(
-                        status_code=409,
-                        detail="Idempotency key conflict: different data",
-                    )
+            for attempt in range(self.max_retries):
+                existing = await self._idempotency_repo.find_by_key(
+                    data.idempotency_key
+                )
+                if existing:
+                    if (
+                        existing.event_id == data.event_id
+                        and existing.first_name == data.first_name
+                        and existing.last_name == data.last_name
+                        and existing.email == data.email
+                        and existing.seat == data.seat
+                    ):
+                        return TicketCreated(ticket_id=str(existing.ticket_id))
+                    else:
+                        raise HTTPException(
+                            status_code=409,
+                            detail="Idempotency key conflict: different data",
+                        )
+
+                if attempt < self.max_retries - 1:
+                    await asyncio.sleep(self.retry_delay)
         try:
             ticket_id = await self._client.register(
                 event_id=str(data.event_id),
@@ -122,6 +132,8 @@ class CancelTicketUseCase:
     ) -> None:
         self._ticket_repo = ticket_repo
         self._client = provider_client
+        self.max_retries = 5
+        self.retry_delay = 1
 
     async def execute(self, ticket_id: str) -> TicketCancelled:
         """
@@ -136,24 +148,41 @@ class CancelTicketUseCase:
         Raises:
             HTTPException: 404, если билет не найден.
         """
-        ticket = await self._ticket_repo.get_by_ticket_id(ticket_id)
+        ticket = None
+        for attempt in range(self.max_retries):
+            ticket = await self._ticket_repo.get_by_ticket_id(ticket_id)
+            if ticket:
+                break
+
+            if attempt < self.max_retries - 1:
+                await asyncio.sleep(self.retry_delay)
+
         if ticket is None:
             raise HTTPException(status_code=404, detail="Билет не найден")
 
-        try:
-            await self._client.unregister(
-                event_id=str(ticket.event_id),
-                ticket_id=ticket_id,
-            )
-        except httpx.HTTPStatusError as exc:
+        for attempt in range(self.max_retries):
             try:
-                detail = exc.response.json().get(
-                    "detail", "Ошибка отмены регистрации у провайдера"
+                await self._client.unregister(
+                    event_id=str(ticket.event_id),
+                    ticket_id=ticket_id,
                 )
-            except Exception:
-                detail = "Ошибка отмены регистрации у провайдера"
-            raise HTTPException(
-                status_code=exc.response.status_code, detail=detail
-            ) from exc
+                break
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code == 404:
+                    if attempt == self.max_retries - 1:
+                        await self._ticket_repo.delete(ticket)
+                        return TicketCancelled()
+                    await asyncio.sleep(self.retry_delay)
+                    continue
+                try:
+                    detail = exc.response.json().get(
+                        "detail", "Ошибка отмены регистрации у провайдера"
+                    )
+                except Exception:
+                    detail = "Ошибка отмены регистрации у провайдера"
+                raise HTTPException(
+                    status_code=exc.response.status_code, detail=detail
+                ) from exc
+
         await self._ticket_repo.delete(ticket)
         return TicketCancelled()
