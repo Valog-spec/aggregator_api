@@ -92,8 +92,3 @@ class OutboxWorker:
         except Exception as e:
             await self._outbox_repo.increment_retry(msg.id, str(e))
             logger.error(f"Ошибка при отправке сообщения {msg.id}: {e}")
-
-            if msg.retry_count + 1 >= self.max_retries:
-                logger.error(
-                    f"Сообщение {msg.id} достигло лимита попыток ({self.max_retries})"
-                )

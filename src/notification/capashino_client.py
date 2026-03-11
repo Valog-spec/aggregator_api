@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 from uuid import uuid4
 
@@ -5,6 +6,8 @@ import httpx
 
 from src.configs.config import settings
 from src.schemas.capashino import CapashinoRequest
+
+logger = logging.getLogger(__name__)
 
 
 class HttpxCapashinoClient:
@@ -39,21 +42,26 @@ class HttpxCapashinoClient:
             idempotency_key (Optional[str]): Ключ идемпотентности для предотвращения
                 дублирующих отправок.
         """
-        body = CapashinoRequest(
-            message=message,
-            reference_id=reference_id,
-            idempotency_key=idempotency_key or str(uuid4()),
-        )
-
-        async with httpx.AsyncClient(
-            headers=self._headers(), follow_redirects=True, timeout=self._timeout
-        ) as client:
-            response = await client.post(
-                f"{self._base_url}/api/notifications", json=body.model_dump()
+        try:
+            body = CapashinoRequest(
+                message=message,
+                reference_id=reference_id,
+                idempotency_key=idempotency_key or str(uuid4()),
             )
-            response.raise_for_status()
 
-            return response
+            async with httpx.AsyncClient(
+                headers=self._headers(), follow_redirects=True, timeout=self._timeout
+            ) as client:
+                response = await client.post(
+                    f"{self._base_url}/api/notifications", json=body.model_dump()
+                )
+                response.raise_for_status()
+
+                return response
+        except Exception as e:
+            logger.error(
+                f"Ошибка при отправке уведомления в Capashino: {e}", exc_info=True
+            )
 
 
 def get_сapashino_client() -> HttpxCapashinoClient:
