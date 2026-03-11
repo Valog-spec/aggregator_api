@@ -1,4 +1,5 @@
 import uuid
+from typing import Optional
 
 from pydantic import BaseModel, EmailStr
 
@@ -11,6 +12,7 @@ class TicketCreate(BaseModel):
     last_name: str
     email: EmailStr
     seat: str
+    idempotency_key: Optional[str] = None
 
 
 class TicketCreated(BaseModel):

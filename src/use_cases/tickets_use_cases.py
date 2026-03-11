@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from src.clients.base import EventsProviderClient
 from src.models.event import EventStatus
 from src.repositories.event_repository import EventRepository
+from src.repositories.idempotency_repository import IdempotencyRepository
 from src.repositories.outbox_repository import OutboxRepository
 from src.repositories.ticket_repository import TicketRepository
 from src.schemas.outbox import OutboxPayload
@@ -18,11 +19,13 @@ class CreateTicketUseCase:
         ticket_repo: TicketRepository,
         event_repo: EventRepository,
         outbox_repo: OutboxRepository,
+        idempotency_repo: IdempotencyRepository,
         provider_client: EventsProviderClient,
     ) -> None:
         self._ticket_repo = ticket_repo
         self._event_repo = event_repo
         self._outbox_repo = outbox_repo
+        self._idempotency_repo = idempotency_repo
         self._client = provider_client
 
     async def execute(self, data: TicketCreate) -> TicketCreated:
@@ -52,7 +55,22 @@ class CreateTicketUseCase:
             raise HTTPException(
                 status_code=400, detail="Событие недоступно для регистрации"
             )
-
+        if data.idempotency_key:
+            existing = await self._idempotency_repo.find_by_key(data.idempotency_key)
+            if existing:
+                if (
+                    existing.event_id == data.event_id
+                    and existing.first_name == data.first_name
+                    and existing.last_name == data.last_name
+                    and existing.email == data.email
+                    and existing.seat == data.seat
+                ):
+                    return TicketCreated(ticket_id=str(existing.ticket_id))
+                else:
+                    raise HTTPException(
+                        status_code=409,
+                        detail="Idempotency key conflict: different data",
+                    )
         try:
             ticket_id = await self._client.register(
                 event_id=str(data.event_id),
@@ -80,6 +98,11 @@ class CreateTicketUseCase:
             email=data.email,
             seat=data.seat,
         )
+
+        if data.idempotency_key:
+            await self._idempotency_repo.create(
+                key=data.idempotency_key, ticket_id=ticket_id, data=data
+            )
         payload = OutboxPayload.from_ticket_data(ticket_id, data)
 
         await self._outbox_repo.create(

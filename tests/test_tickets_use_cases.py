@@ -27,7 +27,9 @@ async def test_create_ticket_event_not_found():
     event_repo = AsyncMock()
     event_repo.get_by_id.return_value = None
 
-    use_case = CreateTicketUseCase(AsyncMock(), event_repo, AsyncMock(), AsyncMock())
+    use_case = CreateTicketUseCase(
+        AsyncMock(), event_repo, AsyncMock(), AsyncMock(), AsyncMock()
+    )
 
     with pytest.raises(HTTPException) as exc_info:
         await use_case.execute(make_ticket_data())
@@ -44,7 +46,9 @@ async def test_create_ticket_event_not_published():
     event_repo = AsyncMock()
     event_repo.get_by_id.return_value = event
 
-    use_case = CreateTicketUseCase(AsyncMock(), event_repo, AsyncMock(), AsyncMock())
+    use_case = CreateTicketUseCase(
+        AsyncMock(), event_repo, AsyncMock(), AsyncMock(), AsyncMock()
+    )
 
     with pytest.raises(HTTPException) as exc_info:
         await use_case.execute(make_ticket_data())
@@ -69,7 +73,9 @@ async def test_create_ticket_success():
     ticket_repo = AsyncMock()
     outbox_repo = AsyncMock()
 
-    use_case = CreateTicketUseCase(ticket_repo, event_repo, outbox_repo, provider)
+    use_case = CreateTicketUseCase(
+        ticket_repo, event_repo, outbox_repo, AsyncMock(), provider
+    )
     data = make_ticket_data(event_id=event_id)
     result = await use_case.execute(data)
 
@@ -98,7 +104,9 @@ async def test_create_ticket_provider_error_not_saved():
 
     ticket_repo = AsyncMock()
     outbox_repo = AsyncMock()
-    use_case = CreateTicketUseCase(ticket_repo, event_repo, outbox_repo, provider)
+    use_case = CreateTicketUseCase(
+        ticket_repo, event_repo, outbox_repo, AsyncMock(), provider
+    )
 
     with pytest.raises(Exception):
         await use_case.execute(make_ticket_data())

@@ -31,4 +31,7 @@ class Outbox(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    __table_args__ = (Index("outbox_pending_fetch", "status"),)
+    __table_args__ = (
+        Index("ix_outbox_pending_fetch", "status", "created_at"),
+        Index("ix_outbox_retry_count", "retry_count"),
+    )

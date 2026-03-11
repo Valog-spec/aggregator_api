@@ -1,4 +1,5 @@
 from src.models.event import Event, EventStatus
+from src.models.idempotency import IdempotencyKey
 from src.models.outbox import Outbox
 from src.models.place import Place
 from src.models.sync_meta import SyncMeta, SyncStatus
@@ -12,4 +13,5 @@ __all__ = [
     "SyncMeta",
     "SyncStatus",
     "Outbox",
+    "IdempotencyKey",
 ]
