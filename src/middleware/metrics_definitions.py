@@ -24,7 +24,7 @@ events_provider_request_duration_seconds = Histogram(
 
 tickets_created_total = Counter("tickets_created_total", " Total created tickets")
 tickets_cancelled_total = Counter("tickets_cancelled_total", " Total cancelled tickets")
-events_total = Gauge("events_provider_request_duration_seconds", "Total number of events in database")
+events_total = Gauge("events_total", "Total number of events in database")
 
 
 cache_hits_total = Counter("cache_hits_total", "Total cache hits")
