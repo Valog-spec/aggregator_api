@@ -13,9 +13,11 @@ from starlette.middleware.cors import CORSMiddleware
 
 from src.api.v1.events import router as events_router
 from src.api.v1.health import router as health_router
+from src.api.v1.metrics import router as metrics_router
 from src.api.v1.sync import router as sync_router
 from src.api.v1.tickets import router as tickets_router
 from src.logger.config import dict_config
+from src.middleware.metrics import MetricsMiddleware
 from src.notification.capashino_client import get_сapashino_client
 from src.repositories.outbox_repository import OutboxRepository
 from src.workers.outbox_worker import OutboxWorker
@@ -115,8 +117,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(MetricsMiddleware)
 
 app.include_router(health_router, prefix="/api")
 app.include_router(events_router, prefix="/api")
 app.include_router(tickets_router, prefix="/api")
 app.include_router(sync_router, prefix="/api")
+app.include_router(metrics_router)

@@ -6,6 +6,7 @@ from fastapi import HTTPException
 
 from src.cache.base import AsyncCacheProtocol
 from src.clients.base import EventsProviderClient
+from src.middleware.metrics_definitions import cache_hits_total, cache_misses_total
 from src.models.event import EventStatus
 from src.repositories.event_repository import EventRepository
 from src.schemas.event import EventDetail, EventListItem, SeatsResponse
@@ -94,6 +95,7 @@ class GetSeatsUseCase:
 
         cached = await self._cache.get(cache_key)
         if cached is not None:
+            cache_hits_total.inc()
             return SeatsResponse(event_id=event_id, available_seats=cached)
 
         try:
@@ -109,4 +111,5 @@ class GetSeatsUseCase:
                 status_code=exc.response.status_code, detail=detail
             ) from exc
         await self._cache.set(cache_key, seats)
+        cache_misses_total.inc()
         return SeatsResponse(event_id=event_id, available_seats=seats)

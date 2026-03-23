@@ -176,3 +176,7 @@ class EventRepository:
     async def commit(self) -> None:
         """Зафиксировать текущую транзакцию."""
         await self._session.commit()
+
+    async def get_count(self):
+        result = await self._session.execute(select(func.count()).select_from(Event))
+        return result.scalar_one()

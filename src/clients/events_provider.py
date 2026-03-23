@@ -4,8 +4,7 @@ import logging
 from typing import Any, AsyncIterator
 from urllib.parse import urlparse
 
-import httpx
-
+from src.clients.metrics_transport import create_http_client
 from src.configs.config import settings
 
 logger = logging.getLogger(__name__)
@@ -54,9 +53,7 @@ class HttpxEventsProviderClient:
         if changed_at:
             params["changed_at"] = changed_at
 
-        async with httpx.AsyncClient(
-            headers=self._headers(), follow_redirects=True, timeout=30.0
-        ) as client:
+        async with create_http_client(headers=self._headers()) as client:
             logger.debug("Запрос первой страницы: %s params=%s", first_url, params)
             response = await client.get(first_url, params=params)
             response.raise_for_status()
@@ -107,9 +104,7 @@ class HttpxEventsProviderClient:
         Raises:
             httpx.HTTPStatusError: При ответе с кодом 4xx/5xx.
         """
-        async with httpx.AsyncClient(
-            headers=self._headers(), follow_redirects=True, timeout=30.0
-        ) as client:
+        async with create_http_client(headers=self._headers()) as client:
             logger.debug("Запрос мест для события %s", event_id)
             response = await client.get(
                 f"{self._base_url}/api/events/{event_id}/seats/"
@@ -144,9 +139,7 @@ class HttpxEventsProviderClient:
         Raises:
             httpx.HTTPStatusError: 400 если место занято, 404 если событие не найдено.
         """
-        async with httpx.AsyncClient(
-            headers=self._headers(), follow_redirects=True, timeout=30.0
-        ) as client:
+        async with create_http_client(headers=self._headers()) as client:
             logger.debug("Регистрация на событие %s, место %s", event_id, seat)
             response = await client.post(
                 f"{self._base_url}/api/events/{event_id}/register/",
@@ -178,9 +171,7 @@ class HttpxEventsProviderClient:
         Raises:
             httpx.HTTPStatusError: 404 если событие или билет не найдены.
         """
-        async with httpx.AsyncClient(
-            headers=self._headers(), follow_redirects=True, timeout=30.0
-        ) as client:
+        async with create_http_client(headers=self._headers()) as client:
             logger.debug("Отмена регистрации: event=%s ticket=%s", event_id, ticket_id)
             response = await client.request(
                 "DELETE",

@@ -4,6 +4,10 @@ import httpx
 from fastapi import HTTPException
 
 from src.clients.base import EventsProviderClient
+from src.middleware.metrics_definitions import (
+    tickets_cancelled_total,
+    tickets_created_total,
+)
 from src.models.event import EventStatus
 from src.repositories.event_repository import EventRepository
 from src.repositories.idempotency_repository import IdempotencyRepository
@@ -118,7 +122,7 @@ class CreateTicketUseCase:
         await self._outbox_repo.create(
             event_type="ticket.created", payload=payload.model_dump()
         )
-
+        tickets_created_total.inc()
         return TicketCreated(ticket_id=ticket_id)
 
 
@@ -185,4 +189,5 @@ class CancelTicketUseCase:
                 ) from exc
 
         await self._ticket_repo.delete(ticket)
+        tickets_cancelled_total.inc()
         return TicketCancelled()
