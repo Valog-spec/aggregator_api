@@ -1,0 +1,25 @@
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN addgroup --system --gid 1000 appuser && \
+    adduser --system --uid 1000 --ingroup appuser appuser
+
+WORKDIR /app
+RUN chown -R appuser:appuser /app
+
+USER appuser
+ENV UV_NO_CACHE=1
+
+COPY --chown=appuser:appuser pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
+
+# Копируем всё, включая уже сгенерированные protobuf файлы
+COPY --chown=appuser:appuser src ./src
+
+EXPOSE 8000
+
+CMD ["uv", "run", "python", "-m", "src.grpc_service.server", "--port", "8000"]

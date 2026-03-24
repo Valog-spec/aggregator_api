@@ -30,7 +30,7 @@ services:
   app:
     build: .
     ports:
-      - "8000:8000"
+      - "8001:8001"
     environment:
       DATABASE_URL: postgresql+asyncpg://user:pass@db:5432/aggregator
       REDIS_URL: redis://redis:6379/0
@@ -60,6 +60,14 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
       - grafana-data:/var/lib/grafana
+
+  grpc-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.grpc
+    container_name: grpc-server
+    ports:
+      - "8000:8000"
 
 volumes:
   postgres_data:
